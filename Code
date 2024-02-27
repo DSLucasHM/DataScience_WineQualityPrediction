@@ -1,0 +1,163 @@
+#Importing
+import pandas as pd
+import numpy as np 
+import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import PolynomialFeatures
+
+
+
+
+#Importing data
+redwine=pd.read_csv(r'C:\Users\lucas\Desktop\dp\winequality-red.csv', delimiter= ';')
+whitewine=pd.read_csv(r'C:\Users\lucas\Desktop\dp\winequality-white.csv', delimiter = ';')
+
+
+
+#Visualazing the dara
+print(redwine.head())
+print(whitewine.head())
+
+
+
+
+#Searching for null values
+redwine.isnull().any()
+whitewine.isnull().any()
+
+
+
+#Searching for outliers
+#This search wat not used, once this dataset does not have any data that may contain any outlier
+def Outliers_search(df):
+    outliers=pd.DataFrame(columns=['Column','Outliers'])
+    for column in df.columns:
+        if df[column].dtype!='object':
+            q1=df[column].quantile(0.25)
+            q3=df[column].quantile(0.75)
+            iqr=q3-q1
+            lower_bound= q1-1.5*iqr
+            upper_bound= q3+1.5*iqr
+            column_outliers= df[(df[column]>lower_bound) | (df[column]<upper_bound)][column]
+            outliers= outliers.append({'Column':column, 'Outliers': column_outliers}, ignore_index=True)
+    return outliers
+
+Outliers_search(redwine)
+Outliers_search(whitewine)
+
+
+
+
+
+#Checking the correlations, it's noticed that the variables 'Fixed Acidity', 'pH', and 'Density' have a high correlation among them; attention should be paid to this.
+#Another point observed is the low correlation among some variables. All the mentioned topics will be taken into consideration later on.
+redwine.corr()
+whitewine.corr()
+
+
+
+
+#Merging both datasets and creating categorical columns (Dummy variables).
+whitewine['dummy_whitewine']="1"
+whitewine['dummy_redwine']="0"
+redwine['dummy_redwine']="1"
+redwine['dummy_whitewine']="0"
+
+wines=pd.concat([whitewine,redwine], ignore_index=True)
+wines=wines[['fixed acidity', 'volatile acidity', 'citric acid', 'residual sugar',
+       'chlorides', 'free sulfur dioxide', 'total sulfur dioxide', 'density',
+       'pH', 'sulphates', 'alcohol','dummy_whitewine',
+       'dummy_redwine','quality']]
+
+print(len(whitewine)==(len(wines[wines["dummy_whitewine"]=='1'])))
+print(len(redwine)==(len(wines[wines["dummy_redwine"]=='1'])))
+
+
+
+
+#Checking
+wines.head(10)
+
+
+
+#Defining independent and target variables (dependent).
+x=wines.iloc[:,:-1].values
+y=wines.iloc[:,-1].values
+
+
+
+
+#Defining training and testing data 80/20 split.
+Xtrain,Xtest,Ytrain,Ytest= train_test_split(x,y, test_size=0.2,random_state=0)
+
+
+
+
+#Creating and testing multiple linear regression model.
+regressor=LinearRegression()
+regressor.fit(Xtrain,Ytrain)
+
+Ypred=regressor.predict(Xtest)
+
+for z in range (len(Ytest)):
+    Yteste=Ytest[z]
+    Yprede=Ypred[z]
+    erro=abs((Ytest[z]-Ypred[z])/Ypred[z]*100)
+    print(erro.mean())
+    print(f'Yteste: {Yteste:.2f} y_previsto: {Yprede:.2f} erro: {erro:.2f}')
+
+
+
+#Creating and testing polynomial multiple linear regression model.
+poly_reg= PolynomialFeatures(degree=1)
+
+Xpoly=poly_reg.fit_transform(Xtrain)
+
+poly_reg.fit(Xpoly, Ytrain)
+
+lin_reg_2=LinearRegression()
+lin_reg_2.fit(Xpoly,Ytrain)
+
+Xtestpoly=poly_reg.fit_transform(Xtest)
+
+Ypred2=lin_reg_2.predict(Xtestpoly)
+
+for z in range (len(Ytest)):
+    Yteste=Ytest[z]
+    Yprede=Ypred2[z]
+    erro=abs((Ytest[z]-Ypred2[z])/Ypred2[z]*100)
+    
+    print(erro.mean())
+    print(f'Yteste: {Yteste:.2f} y_previsto: {Yprede:.2f} erro: {erro:.2f}')
+
+
+
+
+#Creating a DataFrame with the results.
+Comp=pd.DataFrame({'Real':Ytest,'Resultado':Ypred2})
+
+Comp['Erro']=abs((Comp['Real']-Comp['Resultado'])/Comp['Resultado']*100)
+
+
+
+#Thank you!
+
+
+
+
+   
+
+
+
+
+
+
+
+
+
+
+
+
